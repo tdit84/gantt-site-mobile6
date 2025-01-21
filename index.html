@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Tom's Priorities</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      -webkit-user-select: none; /* Prevent text selection on iOS while dragging */
+      user-select: none;
+    }
+    h1 {
+      text-align: center;
+    }
+
+    .table-container {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .column {
+      min-width: 180px;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #f4f4f4;
+      min-height: 150px;
+      position: relative; /* for absolutely positioned tasks while dragging */
+    }
+    /* 3 priority columns + completed */
+    #priority-1 { background-color: #ff7f7f; }
+    #priority-2 { background-color: #ffd27f; }
+    #priority-3 { background-color: #ffff7f; }
+
+    .task {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      position: static; /* for normal flow, changed to absolute on drag */
+      touch-action: none; /* so iOS won't scroll instead of letting us drag */
+    }
+    /* The text area is the 'drag handle' for the entire task */
+    .task-text {
+      cursor: grab;
+      margin: 0 8px;
+    }
+    .task.dragging .task-text {
+      cursor: grabbing;
+    }
+
+    .task-controls {
+      margin-left: auto;
+      display: flex;
+      gap: 5px;
+    }
+    .control-button {
+      cursor: pointer;
+      padding: 2px 6px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      background-color: #eaeaea;
+      font-size: 12px;
+      user-select: none;
+    }
+    .checkbox {
+      margin-right: 5px;
+    }
+
+    .dragging {
+      position: absolute !important;
+      z-index: 9999;
+      opacity: 0.8;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* Simplified new task form: only name, priority, add button */
+    .new-task-form {
+      margin: 20px auto;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .new-task-form input[type="text"] {
+      width: 180px;
+    }
+    /* Highlight drop target column */
+    .column.highlight {
+      outline: 2px dashed #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tom's Priorities</h1>
+
+  <!-- 1) Form to add new tasks (Only Task Name & Priority) -->
+  <div class="new-task-form">
+    <input type="text" id="newTaskName" placeholder="Task name">
+    <select id="newTaskPriority">
+      <option value="1">Priority 1</option>
+      <option value="2">Priority 2</option>
+      <option value="3">Priority 3</option>
+    </select>
+    <button id="addTaskBtn">Add Task</button>
+  </div>
+
+  <!-- 2) Columns: Priority 1,2,3, Completed -->
+  <div class="table-container">
+    <div class="column" id="priority-1">
+      <h3>Priority 1</h3>
+      <div class="task"
+           data-task="Follow up with Gabby"
+           data-priority="1" data-month="1" data-duration="2"
+           data-completed="false">
+        <input type="checkbox" class="checkbox">
+        <span class="task-text">Follow up with Gabby</span>
+        <div class="task-controls">
+          <div class="control-button shift-left">&lt;</div>
+          <div class="control-button shift-right">&gt;</div>
+          <div class="control-button minus">-</div>
+          <div class="control-button plus">+</div>
+        </div>
+      </div>
+      <div class="task"
+           data-task="Take care of insurance"
+           data-priority="1" data-month="2" data-duration="3"
+           data-completed="false">
+        <input type="checkbox" class="checkbox">
+        <span class="task-text">Take care of insurance</span>
+        <div class="task-controls">
+          <div class="control-button shift-left">&lt;</div>
+          <div class="control-button shift-right">&gt;</div>
+          <div class="control-button minus">-</div>
+          <div class="control-button plus">+</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column" id="priority-2">
+      <h3>Priority 2</h3>
+      <div class="task"
+           data-task="Order teacher supplies"
+           data-priority="2" data-month="3" data-duration="4"
+           data-completed="false">
+        <input type="checkbox" class="checkbox">
+        <span class="task-text">Order teacher supplies</span>
+        <div class="task-controls">
+          <div class="control-button shift-left">&lt;</div>
+          <div class="control-button shift-right">&gt;</div>
+          <div class="control-button minus">-</div>
+          <div class="control-button plus">+</div>
+        </div>
+      </div>
+      <div class="task"
+           data-task="Get floor repair quote"
+           data-priority="2" data-month="5" data-duration="2"
+           data-completed="false">
+        <input type="checkbox" class="checkbox">
+        <span class="task-text">Get floor repair quote</span>
+        <div class="task-controls">
+          <div class="control-button shift-left">&lt;</div>
+          <div class="control-button shift-right">&gt;</div>
+          <div class="control-button minus">-</div>
+          <div class="control-button plus">+</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column" id="priority-3">
+      <h3>Priority 3</h3>
+      <!-- Currently empty. Tasks can be moved here. -->
+    </div>
+
+    <div class="column" id="completed">
+      <h3>Completed</h3>
+      <!-- Completed tasks go here -->
+    </div>
+  </div>
+
+  <!-- 3) Gantt Chart area -->
+  <div class="chart-container">
+    <canvas id="ganttChart" width="1000" height="400"></canvas>
+  </div>
+
+  <!-- 4) Chart.js for the Gantt Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    /* =======================
+     * DATA + CHART SETUP
+     * ======================= */
+    let tasks = [];
+    const colors = {
+      1: 'rgba(255,0,0,0.7)',   // red
+      2: 'rgba(255,165,0,0.7)', // orange
+      3: 'rgba(255,255,0,0.7)', // yellow
+      0: 'rgba(200,200,200,0.3)' // completed/hidden
+    };
+
+    function readTasksFromDOM() {
+      tasks = [];
+      document.querySelectorAll('.task').forEach(el => {
+        const taskName = el.getAttribute('data-task');
+        const priority = parseInt(el.getAttribute('data-priority'), 10);
+        const month = parseInt(el.getAttribute('data-month'), 10);
+        const duration = parseInt(el.getAttribute('data-duration'), 10);
+        const completed = el.getAttribute('data-completed') === 'true';
+        if (!completed && priority !== 0) {
+          tasks.push({ task: taskName, priority, month, duration });
+        }
+      });
+    }
+
+    let ganttChart;
+    function createOrUpdateChart() {
+      const dataValues = tasks.map(t => [t.month, t.month + t.duration]);
+      const backgroundColors = tasks.map(t => colors[t.priority] || 'rgba(128,128,128,0.7)');
+
+      const config = {
+        type: 'bar',
+        data: {
+          labels: tasks.map(t => t.task),
+          datasets: [{
+            label: '',
+            data: dataValues,
+            backgroundColor: backgroundColors
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          scales: {
+            x: {
+              type: 'linear',
+              beginAtZero: true,
+              max: 12,
+              ticks: { stepSize: 1 }
+            },
+            y: { beginAtZero: true }
+          },
+          plugins: {
+            title: {
+              display: false
+            },
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.chart.data.labels[context.dataIndex];
+                  const [start, end] = context.raw;
+                  return `${label}: Month ${start} → ${end}`;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      if (ganttChart) {
+        ganttChart.config.data = config.data;
+        ganttChart.config.options = config.options;
+        ganttChart.update();
+      } else {
+        const ctx = document.getElementById('ganttChart').getContext('2d');
+        ganttChart = new Chart(ctx, config);
+      }
+    }
+
+    // Initialize chart
+    readTasksFromDOM();
+    createOrUpdateChart();
+
+    /* =======================
+     * CUSTOM POINTER DRAG
+     * ======================= */
+    let currentDraggingEl = null;
+    let offsetX = 0, offsetY = 0;
+
+    function onPointerDown(e) {
+      // Only start dragging if user tapped the .task-text
+      if (!e.target.classList.contains('task-text')) return;
+
+      const taskEl = e.target.closest('.task');
+      if (!taskEl) return;
+
+      currentDraggingEl = taskEl;
+      taskEl.setPointerCapture(e.pointerId);
+
+      // Switch to absolute positioning
+      const rect = taskEl.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+
+      taskEl.classList.add('dragging');
+      taskEl.style.width = rect.width + 'px';
+      taskEl.style.height = rect.height + 'px';
+      taskEl.style.left = rect.left + 'px';
+      taskEl.style.top = rect.top + 'px';
+    }
+
+    function onPointerMove(e) {
+      if (!currentDraggingEl) return;
+
+      const x = e.clientX - offsetX;
+      const y = e.clientY - offsetY;
+      currentDraggingEl.style.left = x + 'px';
+      currentDraggingEl.style.top = y + 'px';
+
+      highlightColumnUnderPointer(e.clientX, e.clientY);
+    }
+
+    function onPointerUp(e) {
+      if (!currentDraggingEl) return;
+
+      const taskEl = currentDraggingEl;
+      taskEl.releasePointerCapture(e.pointerId);
+
+      // Which column did we drop on?
+      const col = getColumnUnderPointer(e.clientX, e.clientY);
+      if (col) {
+        let newPriority = parseInt(col.id.replace('priority-',''), 10);
+        if (isNaN(newPriority)) {
+          newPriority = 0; // completed
+        }
+        taskEl.setAttribute('data-priority', newPriority);
+        col.appendChild(taskEl);
+      }
+
+      // Reset style
+      taskEl.classList.remove('dragging');
+      taskEl.style.removeProperty('width');
+      taskEl.style.removeProperty('height');
+      taskEl.style.removeProperty('left');
+      taskEl.style.removeProperty('top');
+
+      currentDraggingEl = null;
+      clearHighlight();
+
+      // Update chart
+      readTasksFromDOM();
+      createOrUpdateChart();
+    }
+
+    // Attach pointer events to the document
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+
+    function getColumnUnderPointer(x, y) {
+      const columns = document.querySelectorAll('.column');
+      for (const c of columns) {
+        const r = c.getBoundingClientRect();
+        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+          return c;
+        }
+      }
+      return null;
+    }
+    function highlightColumnUnderPointer(x, y) {
+      document.querySelectorAll('.column').forEach(col => col.classList.remove('highlight'));
+      const col = getColumnUnderPointer(x, y);
+      if (col) col.classList.add('highlight');
+    }
+    function clearHighlight() {
+      document.querySelectorAll('.column').forEach(col => col.classList.remove('highlight'));
+    }
+
+    /* =========================
+     * SHIFT LEFT/RIGHT, +/- DURATION, COMPLETED
+     * ========================= */
+    document.querySelectorAll('.control-button.shift-left').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const taskEl = e.target.closest('.task');
+        let startMonth = parseInt(taskEl.getAttribute('data-month'), 10);
+        if (startMonth > 1) {
+          taskEl.setAttribute('data-month', startMonth - 1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+    });
+    document.querySelectorAll('.control-button.shift-right').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const taskEl = e.target.closest('.task');
+        let startMonth = parseInt(taskEl.getAttribute('data-month'), 10);
+        const duration = parseInt(taskEl.getAttribute('data-duration'), 10);
+        if (startMonth + duration - 1 < 12) {
+          taskEl.setAttribute('data-month', startMonth + 1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+    });
+    document.querySelectorAll('.control-button.minus').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const taskEl = e.target.closest('.task');
+        let duration = parseInt(taskEl.getAttribute('data-duration'), 10);
+        if (duration > 1) {
+          taskEl.setAttribute('data-duration', duration - 1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+    });
+    document.querySelectorAll('.control-button.plus').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const taskEl = e.target.closest('.task');
+        let duration = parseInt(taskEl.getAttribute('data-duration'), 10);
+        let startMonth = parseInt(taskEl.getAttribute('data-month'), 10);
+        if ((startMonth + duration) <= 12) {
+          taskEl.setAttribute('data-duration', duration + 1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+    });
+
+    document.querySelectorAll('.checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const taskEl = e.target.closest('.task');
+        if (e.target.checked) {
+          markTaskCompleted(taskEl);
+        } else {
+          unmarkTaskCompleted(taskEl);
+        }
+      });
+    });
+    function markTaskCompleted(taskEl) {
+      const oldPriority = taskEl.getAttribute('data-priority');
+      taskEl.setAttribute('data-previous-priority', oldPriority);
+      taskEl.setAttribute('data-priority', '0');
+      taskEl.setAttribute('data-completed', 'true');
+      document.getElementById('completed').appendChild(taskEl);
+      readTasksFromDOM();
+      createOrUpdateChart();
+    }
+    function unmarkTaskCompleted(taskEl) {
+      const prev = taskEl.getAttribute('data-previous-priority') || '1';
+      taskEl.setAttribute('data-priority', prev);
+      taskEl.removeAttribute('data-previous-priority');
+      taskEl.setAttribute('data-completed', 'false');
+      const col = document.getElementById('priority-' + prev);
+      if (col) col.appendChild(taskEl);
+      readTasksFromDOM();
+      createOrUpdateChart();
+    }
+
+    /* ====================
+     * ADDING A NEW TASK
+     * ==================== */
+    document.getElementById('addTaskBtn').addEventListener('click', () => {
+      const name = document.getElementById('newTaskName').value.trim();
+      const priority = document.getElementById('newTaskPriority').value;
+      // Default month=1, duration=1
+      const month = 1;
+      const duration = 1;
+
+      if (!name) {
+        alert('Please enter a task name.');
+        return;
+      }
+
+      const newTaskEl = document.createElement('div');
+      newTaskEl.classList.add('task');
+      newTaskEl.setAttribute('data-task', name);
+      newTaskEl.setAttribute('data-priority', priority);
+      newTaskEl.setAttribute('data-month', month);
+      newTaskEl.setAttribute('data-duration', duration);
+      newTaskEl.setAttribute('data-completed', 'false');
+
+      // The 'task-text' is the drag handle
+      newTaskEl.innerHTML = `
+        <input type="checkbox" class="checkbox">
+        <span class="task-text">${name}</span>
+        <div class="task-controls">
+          <div class="control-button shift-left">&lt;</div>
+          <div class="control-button shift-right">&gt;</div>
+          <div class="control-button minus">-</div>
+          <div class="control-button plus">+</div>
+        </div>
+      `;
+
+      const targetCol = document.getElementById('priority-' + priority);
+      if (targetCol) {
+        targetCol.appendChild(newTaskEl);
+      } else {
+        alert('Invalid priority column.');
+      }
+
+      // SHIFT & +/- & Completed
+      newTaskEl.querySelector('.shift-left').addEventListener('click', (e) => {
+        e.stopPropagation();
+        let s = parseInt(newTaskEl.getAttribute('data-month'),10);
+        if (s>1) {
+          newTaskEl.setAttribute('data-month', s-1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+      newTaskEl.querySelector('.shift-right').addEventListener('click', (e) => {
+        e.stopPropagation();
+        let s = parseInt(newTaskEl.getAttribute('data-month'),10);
+        let d = parseInt(newTaskEl.getAttribute('data-duration'),10);
+        if (s + d -1 < 12) {
+          newTaskEl.setAttribute('data-month', s+1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+      newTaskEl.querySelector('.minus').addEventListener('click', (e) => {
+        e.stopPropagation();
+        let d = parseInt(newTaskEl.getAttribute('data-duration'),10);
+        if (d>1) {
+          newTaskEl.setAttribute('data-duration', d-1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+      newTaskEl.querySelector('.plus').addEventListener('click', (e) => {
+        e.stopPropagation();
+        let d = parseInt(newTaskEl.getAttribute('data-duration'),10);
+        let s = parseInt(newTaskEl.getAttribute('data-month'),10);
+        if (s + d <=12) {
+          newTaskEl.setAttribute('data-duration', d+1);
+          readTasksFromDOM();
+          createOrUpdateChart();
+        }
+      });
+      newTaskEl.querySelector('.checkbox').addEventListener('change', (e) => {
+        if (e.target.checked) markTaskCompleted(newTaskEl);
+        else unmarkTaskCompleted(newTaskEl);
+      });
+
+      // Clear the text box
+      document.getElementById('newTaskName').value = '';
+
+      // Update chart
+      readTasksFromDOM();
+      createOrUpdateChart();
+    });
+  </script>
+</body>
+</html>
